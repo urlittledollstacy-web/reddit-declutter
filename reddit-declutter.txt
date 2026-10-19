@@ -1,0 +1,154 @@
+! Title: Reddit - declutter (OLED black + no background blur)
+! Description: Two things in one list:
+!   1. OLED black - forces pure black on Reddit's dark theme.
+!   2. No background blur - hides the blurred backdrop behind image
+!      previews in posts.
+! Applies to: reddit.com and all subdomains (www, old, sh, new)
+! Last updated: 2026-10-19 (rev 1 - merged from reddit-vantablack + reddit-no-blur)
+!
+! ============================================================
+! CONTENTS
+! ============================================================
+! PART 1 - OLED BLACK            (12 rules)
+!   Converted from the Stylus userstyle "Vantablack for reddit" by
+!   replaceitem - https://userstyles.world/style/28223
+!
+! PART 2 - NO BACKGROUND BLUR    (4 rules)
+!   Ported from the RedditEnhancer extension by joelacus -
+!   https://github.com/joelacus/RedditEnhancer
+!   src-webpack/src/common/content/tweaks/media/
+!     hide_blurred_media_background.js
+!
+! The two parts do not conflict. Part 1 sets CSS variables
+! (--color-neutral-background); part 2 sets background-color directly
+! with !important. A direct declaration on the element wins over a
+! variable inherited from a parent, so the blur still clears.
+! ============================================================
+
+! ============================================================
+! PART 1 - OLED BLACK
+! ============================================================
+! Forces three Reddit CSS variables to pure black, plus one border.
+!
+! REQUIRES REDDIT DARK MODE. Every rule here is scoped to .theme-dark,
+! so nothing fires in light mode. That is the same precondition the
+! original userstyle documents, and it is deliberate: painting black
+! backgrounds under dark text would be worse than doing nothing.
+!
+! WHY THE SELECTORS ARE SPLIT
+! The original wrote these as comma-separated groups. They are split
+! into one rule each so a single non-matching selector cannot take the
+! others down with it, and so a failure is traceable to one line.
+!
+! WHAT WAS LOST IN CONVERSION
+! The original is written in LESS (@preprocessor less) and has a second
+! branch wrapped in @media (prefers-color-scheme: dark) { ... }.
+! Filter syntax has no equivalent for media queries, so that branch is
+! omitted rather than guessed at. It covers "system is dark but Reddit
+! has no explicit theme class". See the disabled block at the bottom.
+!
+! NOTE ON THE " * " RULES
+! Variables inherit, so setting them on the container should reach every
+! child. Reddit re-declares these variables on nested elements though, so
+! the descendant universal is what actually forces black through. The
+! original did the same thing for the same reason.
+! ============================================================
+! Variables -> black
+! ============================================================
+reddit.com##.theme-dark .theme-beta:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+reddit.com##.theme-dark .theme-rpl:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+reddit.com##.theme-dark.theme-beta:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+reddit.com##.theme-dark.theme-rpl:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+reddit.com##.theme-dark .theme-beta *:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+reddit.com##.theme-dark .theme-rpl *:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+reddit.com##.theme-dark.theme-beta *:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+reddit.com##.theme-dark.theme-rpl *:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+! ============================================================
+! Border on .bg-neutral-background-weak
+! ============================================================
+reddit.com##.theme-dark .theme-beta .bg-neutral-background-weak:style(border: 1px solid var(--color-neutral-border-weak) !important)
+reddit.com##.theme-dark .theme-rpl .bg-neutral-background-weak:style(border: 1px solid var(--color-neutral-border-weak) !important)
+reddit.com##.theme-dark.theme-beta .bg-neutral-background-weak:style(border: 1px solid var(--color-neutral-border-weak) !important)
+reddit.com##.theme-dark.theme-rpl .bg-neutral-background-weak:style(border: 1px solid var(--color-neutral-border-weak) !important)
+
+! ============================================================
+! PART 2 - NO BACKGROUND BLUR BEHIND IMAGE PREVIEWS
+! ============================================================
+! Hides the blurred backdrop that Reddit puts behind single-image and
+! carousel image previews in posts.
+!
+! THE MECHANISM
+! The blurred backdrop is an ordinary LIGHT-DOM element:
+!   <img class="post-background-image-filter">
+! RedditEnhancer hides it by injecting a stylesheet into document.head.
+! Document CSS cannot reach shadow DOM, so the fact that their rule
+! works proves this element is in the light DOM - a filter list can
+! target it the same way.
+!
+! This is NOT the NSFW/spoiler thumbnail blur, which is a different
+! feature. For that, use Reddit's own setting:
+!   Profile -> Settings -> Preferences -> Content
+!   -> "Blur mature (18+) images and media"
+!
+! TWO RULES COULD NOT BE PORTED
+! RedditEnhancer also uses two selectors containing :has(). This engine
+! DROPS :has() entirely - confirmed by serialized filter-set
+! byte-diffing (a :has() rule adds 0 bytes, i.e. it is discarded at
+! parse time, while the same rule without :has() is retained).
+!   gallery-carousel li:has(img.media-lightbox-img) { ... }
+!   div[slot="post-media-container"]:not(:has(.crosspost-title)) > div { ... }
+! Both only remove an extra tint/border on carousel and multi-image
+! posts. Cosmetic polish, not the blur itself.
+! ============================================================
+! THE BLUR ITSELF
+! ============================================================
+reddit.com##img.post-background-image-filter:style(display: none !important; visibility: hidden !important)
+! Supporting cleanup - clears the dark background behind the blur, so
+! hiding it does not leave a black rectangle in its place.
+reddit.com##.bg-black:style(--tw-bg-opacity: 0 !important)
+reddit.com##div[slot="post-media-container"]:style(background-color: transparent !important)
+reddit.com##div[slot="post-media-container"] > div:style(background-color: transparent !important)
+
+! ============================================================
+! DISABLED - the omitted @media branch from the original userstyle
+! ============================================================
+! The original applied the same black variables when the OS is in dark
+! mode and Reddit has no explicit theme class:
+!
+! @media (prefers-color-scheme: dark) {
+!   :root:not(.theme-light) .theme-beta, ... { ... }
+! }
+!
+! That @media condition cannot be expressed in filter syntax. Dropping
+! the condition and applying the rules unconditionally is NOT
+! equivalent: :root:not(.theme-light) also matches when Reddit is in
+! LIGHT mode on a light-mode system, which would paint black
+! backgrounds under dark text.
+!
+! So these stay disabled. If you want them, uncomment AND verify that
+! Reddit is in dark mode, then check light mode still looks right.
+!
+! reddit.com##:root:not(.theme-light) .theme-beta:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+! reddit.com##:root:not(.theme-light) .theme-rpl:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+! reddit.com##:root:not(.theme-light).theme-beta:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+! reddit.com##:root:not(.theme-light).theme-rpl:style(--color-neutral-background: black !important; --color-tone-7: black !important; --color-neutral-background-weak: black !important)
+
+! ============================================================
+! WHAT THIS CANNOT DO
+! ============================================================
+! - The NSFW/spoiler thumbnail blur. Different feature; use Reddit's
+!   own content preference (see Part 2).
+! - Reach inside a shadowRoot. Affects other Reddit blur features, not
+!   the background blur in Part 2.
+! - :has() selectors. Dropped by this engine at parse time.
+! - Un-blur an image whose blur is baked into the file server-side.
+!
+! IF PART 2 STOPS WORKING
+! Reddit A/B tests markup. If the class was renamed, the core rule
+! silently does nothing. Open a post with an image, inspect the blurred
+! backdrop element, and look for a class containing "background" or
+! "blur" on an <img>.
+!
+! RedditEnhancer itself is the fallback. It is a full extension, so it
+! can do things a filter list cannot (including the :has() rules).
+! ============================================================
